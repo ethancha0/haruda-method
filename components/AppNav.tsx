@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { AuthControls } from "@/components/AuthControls";
 import { useChartStore } from "@/components/ChartProvider";
 import { WeekStepper } from "@/components/WeekStepper";
 
@@ -18,7 +19,14 @@ export function AppNav() {
   const pathname = usePathname();
   const { status, chart } = useChartStore();
 
-  if (status !== "ready" || !chart || pathname === "/onboarding") return null;
+  if (
+    status === "loading" ||
+    status === "signed-out" ||
+    pathname === "/onboarding" ||
+    pathname === "/login"
+  ) {
+    return null;
+  }
 
   return (
     <header className="sticky top-0 z-30 border-b border-line bg-page/90 backdrop-blur">
@@ -26,34 +34,38 @@ export function AppNav() {
         <div className="min-w-0 flex-1">
           <p className="eyebrow text-accent">Haruda Method</p>
           <p className="truncate font-display text-[15px] leading-snug text-ink">
-            {chart.goal}
+            {chart?.goal ?? "No chart yet"}
           </p>
         </div>
 
-        {WEEK_SCOPED_ROUTES.has(pathname) && <WeekStepper compact />}
+        {chart && WEEK_SCOPED_ROUTES.has(pathname) && <WeekStepper compact />}
 
-        <nav aria-label="Views">
-          <ul className="flex items-center gap-1">
-            {TABS.map((tab) => {
-              const isActive = pathname === tab.href;
-              return (
-                <li key={tab.href}>
-                  <Link
-                    href={tab.href}
-                    aria-current={isActive ? "page" : undefined}
-                    className={`block rounded-full px-3 py-1.5 text-[13px] transition ${
-                      isActive
-                        ? "bg-ink text-page"
-                        : "text-ink-soft hover:bg-surface hover:text-ink"
-                    }`}
-                  >
-                    {tab.label}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </nav>
+        {chart && (
+          <nav aria-label="Views">
+            <ul className="flex items-center gap-1">
+              {TABS.map((tab) => {
+                const isActive = pathname === tab.href;
+                return (
+                  <li key={tab.href}>
+                    <Link
+                      href={tab.href}
+                      aria-current={isActive ? "page" : undefined}
+                      className={`block rounded-full px-3 py-1.5 text-[13px] transition ${
+                        isActive
+                          ? "bg-ink text-page"
+                          : "text-ink-soft hover:bg-surface hover:text-ink"
+                      }`}
+                    >
+                      {tab.label}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </nav>
+        )}
+
+        <AuthControls />
       </div>
     </header>
   );

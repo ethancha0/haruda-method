@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { useChartStore } from "@/components/ChartProvider";
+import { EmptyState, LoadingState } from "@/components/ChartStates";
 import { TargetStepper, TextAreaField, TextField, inputClass } from "@/components/ui/Field";
 import { todayKey } from "@/lib/dates";
 import { createId } from "@/lib/id";
@@ -30,7 +31,7 @@ function emptyActionRows(count: number): ActionDraft[] {
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const { chart, initChart, loadSampleChart } = useChartStore();
+  const { status, chart, initChart, loadSampleChart } = useChartStore();
 
   const [step, setStep] = useState(0);
   const [goal, setGoal] = useState("");
@@ -134,6 +135,9 @@ export default function OnboardingPage() {
     initChart(nextChart);
     router.push("/");
   };
+
+  if (status === "loading") return <LoadingState />;
+  if (status === "signed-out") return <EmptyState />;
 
   return (
     <div className="mx-auto w-full max-w-3xl px-5 py-10 sm:py-14">

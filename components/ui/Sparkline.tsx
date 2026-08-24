@@ -5,9 +5,11 @@ const HEIGHT = 28;
 export function Sparkline({
   values,
   label,
+  className = "h-8 w-full",
 }: {
   values: number[];
   label: string;
+  className?: string;
 }) {
   if (values.length === 0) return null;
 
@@ -28,7 +30,7 @@ export function Sparkline({
       preserveAspectRatio="none"
       role="img"
       aria-label={label}
-      className="h-8 w-full overflow-visible"
+      className={`overflow-visible ${className}`}
     >
       <polygon points={area} className="fill-cell-part" />
       <polyline

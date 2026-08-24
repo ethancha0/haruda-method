@@ -8,7 +8,7 @@ type PersistedState = {
   chart: Chart | null;
 };
 
-function isChart(value: unknown): value is Chart {
+export function isChart(value: unknown): value is Chart {
   if (typeof value !== "object" || value === null) return false;
   const candidate = value as Partial<Chart>;
   return (

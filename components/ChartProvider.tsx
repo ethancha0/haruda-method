@@ -6,11 +6,20 @@ import {
   useEffect,
   useMemo,
   useReducer,
+  useRef,
+  useState,
 } from "react";
+import type { User } from "@supabase/supabase-js";
+import {
+  deleteRemoteChart,
+  loadRemoteChart,
+  saveRemoteChart,
+} from "@/lib/chartRepository";
 import { addDaysToKey, currentWeekKey, todayKey } from "@/lib/dates";
 import { createId } from "@/lib/id";
 import { createSampleChart } from "@/lib/sampleChart";
 import { clearChart, loadChart, saveChart } from "@/lib/storage";
+import { createClient } from "@/lib/supabase/client";
 import { ACTIONS_PER_THEME, type Chart } from "@/lib/types";
 
 type ChartAction =
@@ -187,8 +196,9 @@ function reducer(state: State, action: ChartAction): State {
 }
 
 export type ChartStore = {
-  /** `loading` until localStorage has been read on the client. */
-  status: "loading" | "empty" | "ready";
+  /** `loading` until auth and the chart have been read on the client. */
+  status: "loading" | "signed-out" | "empty" | "ready";
+  user: User | null;
   chart: Chart | null;
   /** Monday of the week every cadence view is currently reading. */
   weekKey: string;
@@ -213,6 +223,7 @@ export type ChartStore = {
   }) => void;
   setWeekNote: (weekKey: string, note: string) => void;
   resetChart: () => void;
+  signOut: () => Promise<void>;
 };
 
 const ChartContext = createContext<ChartStore | null>(null);
@@ -224,32 +235,107 @@ export function ChartProvider({ children }: { children: React.ReactNode }) {
     hydrated: false,
     weekKey: "",
   });
+  const [user, setUser] = useState<User | null>(null);
+  const skipSave = useRef(true);
 
   useEffect(() => {
-    dispatch({
-      type: "hydrate",
-      chart: loadChart(),
-      weekKey: currentWeekKey(),
+    const supabase = createClient();
+    let cancelled = false;
+
+    const hydrate = async (nextUser: User | null) => {
+      skipSave.current = true;
+      setUser(nextUser);
+      const weekKey = currentWeekKey();
+
+      if (!nextUser) {
+        if (!cancelled) {
+          dispatch({ type: "hydrate", chart: null, weekKey });
+        }
+        return;
+      }
+
+      try {
+        const remote = await loadRemoteChart(supabase);
+        if (cancelled) return;
+        if (remote) {
+          saveChart(remote);
+          dispatch({ type: "hydrate", chart: remote, weekKey });
+          return;
+        }
+
+        const local = loadChart();
+        if (local) {
+          await saveRemoteChart(supabase, local);
+          dispatch({ type: "hydrate", chart: local, weekKey });
+          return;
+        }
+
+        dispatch({ type: "hydrate", chart: null, weekKey });
+      } catch (error) {
+        console.error("Failed to load chart from Supabase", error);
+        if (!cancelled) {
+          dispatch({ type: "hydrate", chart: loadChart(), weekKey });
+        }
+      }
+    };
+
+    void supabase.auth.getUser().then(({ data }) => {
+      if (!cancelled) void hydrate(data.user);
     });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_IN" || event === "SIGNED_OUT") {
+        void hydrate(session?.user ?? null);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
-    if (!state.hydrated) return;
-    if (state.chart) saveChart(state.chart);
-    else clearChart();
-  }, [state.chart, state.hydrated]);
+    if (!state.hydrated || !user) return;
+    if (skipSave.current) {
+      skipSave.current = false;
+      return;
+    }
+
+    const supabase = createClient();
+    const handle = window.setTimeout(() => {
+      if (state.chart) {
+        saveChart(state.chart);
+        void saveRemoteChart(supabase, state.chart).catch((error) => {
+          console.error("Failed to save chart to Supabase", error);
+        });
+      } else {
+        clearChart();
+        void deleteRemoteChart(supabase).catch((error) => {
+          console.error("Failed to delete chart in Supabase", error);
+        });
+      }
+    }, 350);
+
+    return () => window.clearTimeout(handle);
+  }, [state.chart, state.hydrated, user]);
 
   const weekKey = state.weekKey;
 
   const value = useMemo<ChartStore>(() => {
     const status = !state.hydrated
       ? ("loading" as const)
-      : state.chart
-        ? ("ready" as const)
-        : ("empty" as const);
+      : !user
+        ? ("signed-out" as const)
+        : state.chart
+          ? ("ready" as const)
+          : ("empty" as const);
 
     return {
       status,
+      user,
       chart: state.chart,
       weekKey,
       isCurrentWeek: weekKey === currentWeekKey(),
@@ -273,8 +359,12 @@ export function ChartProvider({ children }: { children: React.ReactNode }) {
       setWeekNote: (key, note) =>
         dispatch({ type: "setWeekNote", weekKey: key, note }),
       resetChart: () => dispatch({ type: "reset" }),
+      signOut: async () => {
+        const supabase = createClient();
+        await supabase.auth.signOut();
+      },
     };
-  }, [state.chart, state.hydrated, weekKey]);
+  }, [state.chart, state.hydrated, user, weekKey]);
 
   return (
     <ChartContext.Provider value={value}>{children}</ChartContext.Provider>

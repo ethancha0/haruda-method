@@ -21,7 +21,28 @@ export function LoadingState() {
 }
 
 export function EmptyState() {
-  const { loadSampleChart } = useChartStore();
+  const { status, loadSampleChart } = useChartStore();
+
+  if (status === "signed-out") {
+    return (
+      <div className="mx-auto w-full max-w-xl px-5 py-20">
+        <p className="eyebrow text-accent">Haruda Method</p>
+        <h1 className="mt-3 font-display text-4xl leading-tight">
+          One goal, eight themes, sixty-four actions.
+        </h1>
+        <p className="mt-5 text-[15px] leading-relaxed text-ink-soft">
+          Sign in with Google and the chart follows you — goal, weekly cadence,
+          and the log of every rep.
+        </p>
+        <Link
+          href="/login"
+          className="mt-9 inline-flex rounded-full bg-ink px-5 py-2.5 text-[14px] text-page transition hover:bg-ink/85"
+        >
+          Continue with Google
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto w-full max-w-xl px-5 py-20">
@@ -52,7 +73,8 @@ export function EmptyState() {
       </div>
 
       <p className="mt-4 text-[13px] text-ink-faint">
-        Everything is stored in this browser only. No account, no server.
+        Saved to your account. A new device with the same Google login will see
+        the same chart.
       </p>
     </div>
   );
