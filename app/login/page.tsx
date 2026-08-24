@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
@@ -31,7 +32,9 @@ function LoginForm() {
 
   return (
     <div className="mx-auto w-full max-w-xl px-5 py-20">
-      <p className="eyebrow text-accent">Haruda Method</p>
+      <Link href="/">
+        <p className="eyebrow text-accent">Haruda Method</p>
+      </Link>
       <h1 className="mt-3 font-display text-4xl leading-tight">
         Sign in to keep the chart with you.
       </h1>

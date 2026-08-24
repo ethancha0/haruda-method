@@ -32,7 +32,9 @@ export function AppNav() {
     <header className="sticky top-0 z-30 border-b border-line bg-page/90 backdrop-blur">
       <div className="mx-auto flex w-full max-w-[1180px] flex-wrap items-center gap-x-6 gap-y-3 px-5 py-3">
         <div className="min-w-0 flex-1">
-          <p className="eyebrow text-accent">Haruda Method</p>
+          <Link href="/">
+            <p className="eyebrow text-accent">Haruda Method</p>
+          </Link>
           <p className="truncate font-display text-[15px] leading-snug text-ink">
             {chart?.goal ?? "No chart yet"}
           </p>

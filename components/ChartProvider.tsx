@@ -27,7 +27,7 @@ type ChartAction =
   | { type: "shiftWeek"; delta: number }
   | { type: "goToCurrentWeek" }
   | { type: "init"; chart: Chart }
-  | { type: "logRep"; actionId: string; date: string }
+  | { type: "logRep"; actionId: string; date: string; note?: string }
   | { type: "undoRep"; actionId: string; date: string }
   | { type: "addAction"; themeId: string; title: string; target: number }
   | {
@@ -77,17 +77,21 @@ function reducer(state: State, action: ChartAction): State {
   if (!chart) return state;
 
   switch (action.type) {
-    case "logRep":
+    case "logRep": {
+      const entry = {
+        id: createId("log"),
+        actionId: action.actionId,
+        date: action.date,
+        ...(action.note ? { note: action.note } : {}),
+      };
       return {
         ...state,
         chart: {
           ...chart,
-          logs: [
-            ...chart.logs,
-            { id: createId("log"), actionId: action.actionId, date: action.date },
-          ],
+          logs: [...chart.logs, entry],
         },
       };
+    }
 
     case "undoRep": {
       const candidates = chart.logs.filter(
@@ -207,7 +211,7 @@ export type ChartStore = {
   goToCurrentWeek: () => void;
   initChart: (chart: Chart) => void;
   loadSampleChart: () => void;
-  logRep: (actionId: string, date?: string) => void;
+  logRep: (actionId: string, date?: string, note?: string) => void;
   undoRep: (actionId: string, date?: string) => void;
   addAction: (themeId: string, title: string, target: number) => void;
   updateAction: (
@@ -344,8 +348,15 @@ export function ChartProvider({ children }: { children: React.ReactNode }) {
       initChart: (chart) => dispatch({ type: "init", chart }),
       loadSampleChart: () =>
         dispatch({ type: "init", chart: createSampleChart() }),
-      logRep: (actionId, date) =>
-        dispatch({ type: "logRep", actionId, date: date ?? todayKey() }),
+      logRep: (actionId, date, note) => {
+        const trimmed = note?.trim();
+        dispatch({
+          type: "logRep",
+          actionId,
+          date: date ?? todayKey(),
+          ...(trimmed ? { note: trimmed } : {}),
+        });
+      },
       undoRep: (actionId, date) =>
         dispatch({ type: "undoRep", actionId, date: date ?? todayKey() }),
       addAction: (themeId, title, target) =>

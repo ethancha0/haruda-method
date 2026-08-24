@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { RepHistoryStrip } from "@/components/dialogs/RepHistoryStrip";
 import { useChartStore } from "@/components/ChartProvider";
 import { TargetStepper, inputClass } from "@/components/ui/Field";
 import { Dialog } from "@/components/ui/Dialog";
@@ -14,8 +15,6 @@ import {
   todayKey,
 } from "@/lib/dates";
 import { STATUS_LABEL } from "@/components/chart/cellStyles";
-
-const HISTORY_DAYS = 14;
 
 type ActionDialogProps = {
   actionId?: string;
@@ -39,25 +38,19 @@ export function ActionDialog({
 
   const [draftTitle, setDraftTitle] = useState(action?.title ?? "");
   const [draftTarget, setDraftTarget] = useState(action?.target ?? 3);
+  const [draftNote, setDraftNote] = useState("");
 
   const logDate = isCurrentWeek ? todayKey() : addDaysToKey(weekKey, 6);
 
-  const { reps, daysSinceLast, history } = useMemo(() => {
+  const { reps, daysSinceLast } = useMemo(() => {
     const logs = chart?.logs.filter((log) => log.actionId === actionId) ?? [];
     const days = logs.map((log) => log.date).sort();
-    const counts = new Map<string, number>();
-    for (const day of days) counts.set(day, (counts.get(day) ?? 0) + 1);
-
     const lastDone = days.length > 0 ? days[days.length - 1] : null;
 
     return {
       reps: days.filter((day) => isWithinWeek(day, weekKey)).length,
       daysSinceLast:
         lastDone === null ? null : Math.max(0, daysBetween(lastDone, logDate)),
-      history: Array.from({ length: HISTORY_DAYS }, (_, index) => {
-        const day = addDaysToKey(logDate, index - (HISTORY_DAYS - 1));
-        return { day, count: counts.get(day) ?? 0 };
-      }),
     };
   }, [chart?.logs, actionId, weekKey, logDate]);
 
@@ -65,6 +58,13 @@ export function ActionDialog({
 
   const isCreate = !action;
   const status = action ? actionStatus(reps, action.target) : "not-started";
+
+  const logRep = () => {
+    if (!action) return;
+    const note = draftNote.trim() || undefined;
+    store.logRep(action.id, logDate, note);
+    setDraftNote("");
+  };
 
   return (
     <Dialog
@@ -127,13 +127,22 @@ export function ActionDialog({
               </button>
               <button
                 type="button"
-                onClick={() => store.logRep(action.id, logDate)}
+                onClick={logRep}
                 className="rounded-full bg-ink px-4 py-1.5 text-[13px] text-page transition hover:bg-ink/85"
               >
                 Log a rep
               </button>
             </div>
           </div>
+
+          <input
+            value={draftNote}
+            maxLength={120}
+            onChange={(event) => setDraftNote(event.target.value)}
+            placeholder="What did you do? (optional)"
+            aria-label="Rep description"
+            className={inputClass}
+          />
 
           {!isCurrentWeek && (
             <p className="text-[12px] text-ink-faint">
@@ -142,24 +151,13 @@ export function ActionDialog({
             </p>
           )}
 
-          <div>
-            <p className="eyebrow text-ink-soft">Last {HISTORY_DAYS} days</p>
-            <div className="mt-2 flex gap-1">
-              {history.map((entry) => (
-                <span
-                  key={entry.day}
-                  title={`${formatFullDate(entry.day)}: ${entry.count} rep${entry.count === 1 ? "" : "s"}`}
-                  className={`h-6 flex-1 border ${
-                    entry.count === 0
-                      ? "border-line bg-surface"
-                      : entry.count === 1
-                        ? "border-accent-soft/60 bg-cell-met"
-                        : "border-accent-soft bg-cell-ahead"
-                  }`}
-                />
-              ))}
-            </div>
-          </div>
+          <RepHistoryStrip
+            key={`${action.id}-${logDate}`}
+            actionId={action.id}
+            logs={chart.logs}
+            logDate={logDate}
+            chartCreatedAt={chart.createdAt}
+          />
 
           <div className="space-y-4 border-t border-line pt-5">
             <input

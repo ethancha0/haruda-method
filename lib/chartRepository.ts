@@ -30,6 +30,7 @@ export function normalizeChart(value: unknown): Chart | null {
     logs: value.logs.map((log) => ({
       ...log,
       date: asDateString(log.date) ?? log.date,
+      note: log.note?.trim() || undefined,
     })),
   };
 }
