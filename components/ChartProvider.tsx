@@ -2,12 +2,10 @@
 
 import {
   createContext,
-  useCallback,
   useContext,
   useEffect,
   useMemo,
   useReducer,
-  useState,
 } from "react";
 import { addDaysToKey, currentWeekKey, todayKey } from "@/lib/dates";
 import { createId } from "@/lib/id";
@@ -16,7 +14,9 @@ import { clearChart, loadChart, saveChart } from "@/lib/storage";
 import { ACTIONS_PER_THEME, type Chart } from "@/lib/types";
 
 type ChartAction =
-  | { type: "hydrate"; chart: Chart | null }
+  | { type: "hydrate"; chart: Chart | null; weekKey: string }
+  | { type: "shiftWeek"; delta: number }
+  | { type: "goToCurrentWeek" }
   | { type: "init"; chart: Chart }
   | { type: "logRep"; actionId: string; date: string }
   | { type: "undoRep"; actionId: string; date: string }
@@ -36,6 +36,8 @@ type ChartAction =
 type State = {
   chart: Chart | null;
   hydrated: boolean;
+  /** Monday of the week being read; empty until the client clock is known. */
+  weekKey: string;
 };
 
 function reducer(state: State, action: ChartAction): State {
@@ -43,7 +45,15 @@ function reducer(state: State, action: ChartAction): State {
 
   switch (action.type) {
     case "hydrate":
-      return { chart: action.chart, hydrated: true };
+      return { chart: action.chart, hydrated: true, weekKey: action.weekKey };
+
+    case "shiftWeek":
+      return state.weekKey
+        ? { ...state, weekKey: addDaysToKey(state.weekKey, action.delta * 7) }
+        : state;
+
+    case "goToCurrentWeek":
+      return { ...state, weekKey: currentWeekKey() };
 
     case "init":
       return { ...state, chart: action.chart };
@@ -208,13 +218,19 @@ export type ChartStore = {
 const ChartContext = createContext<ChartStore | null>(null);
 
 export function ChartProvider({ children }: { children: React.ReactNode }) {
-  const [state, dispatch] = useReducer(reducer, { chart: null, hydrated: false });
-  // Left null until mount so the server never renders a week from its own clock.
-  const [selectedWeek, setSelectedWeek] = useState<string | null>(null);
+  // The week stays empty until mount so the server never renders from its own clock.
+  const [state, dispatch] = useReducer(reducer, {
+    chart: null,
+    hydrated: false,
+    weekKey: "",
+  });
 
   useEffect(() => {
-    setSelectedWeek(currentWeekKey());
-    dispatch({ type: "hydrate", chart: loadChart() });
+    dispatch({
+      type: "hydrate",
+      chart: loadChart(),
+      weekKey: currentWeekKey(),
+    });
   }, []);
 
   useEffect(() => {
@@ -223,17 +239,7 @@ export function ChartProvider({ children }: { children: React.ReactNode }) {
     else clearChart();
   }, [state.chart, state.hydrated]);
 
-  const weekKey = selectedWeek ?? "";
-
-  const shiftWeek = useCallback((delta: number) => {
-    setSelectedWeek((current) =>
-      current ? addDaysToKey(current, delta * 7) : current,
-    );
-  }, []);
-
-  const goToCurrentWeek = useCallback(() => {
-    setSelectedWeek(currentWeekKey());
-  }, []);
+  const weekKey = state.weekKey;
 
   const value = useMemo<ChartStore>(() => {
     const status = !state.hydrated
@@ -247,8 +253,8 @@ export function ChartProvider({ children }: { children: React.ReactNode }) {
       chart: state.chart,
       weekKey,
       isCurrentWeek: weekKey === currentWeekKey(),
-      shiftWeek,
-      goToCurrentWeek,
+      shiftWeek: (delta) => dispatch({ type: "shiftWeek", delta }),
+      goToCurrentWeek: () => dispatch({ type: "goToCurrentWeek" }),
       initChart: (chart) => dispatch({ type: "init", chart }),
       loadSampleChart: () =>
         dispatch({ type: "init", chart: createSampleChart() }),
@@ -268,7 +274,7 @@ export function ChartProvider({ children }: { children: React.ReactNode }) {
         dispatch({ type: "setWeekNote", weekKey: key, note }),
       resetChart: () => dispatch({ type: "reset" }),
     };
-  }, [state.chart, state.hydrated, weekKey, shiftWeek, goToCurrentWeek]);
+  }, [state.chart, state.hydrated, weekKey]);
 
   return (
     <ChartContext.Provider value={value}>{children}</ChartContext.Provider>

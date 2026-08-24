@@ -35,7 +35,7 @@ export function CenterBlock({
       onKeyDown={onKeyDown}
       className="grid grid-cols-3 gap-px border border-line bg-line"
     >
-      {cells.map((summary, index) => {
+      {cells.map((summary) => {
         if (!summary) {
           return (
             <button
