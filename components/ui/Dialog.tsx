@@ -14,28 +14,43 @@ type DialogProps = {
 export function Dialog({ open, onClose, title, eyebrow, children }: DialogProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const headingId = useId();
+  const onCloseRef = useRef(onClose);
+  const wasOpenRef = useRef(false);
 
   useEffect(() => {
-    if (!open) return;
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
+  useEffect(() => {
+    if (!open) {
+      wasOpenRef.current = false;
+      return;
+    }
 
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") onCloseRef.current();
     };
     document.addEventListener("keydown", onKeyDown);
 
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
-    const firstField = panelRef.current?.querySelector<HTMLElement>(
-      "input, textarea, button",
-    );
-    firstField?.focus();
+    // Focus once when the dialog opens — not on every parent re-render.
+    // Prefer a text field so we never steal focus onto the header close button.
+    if (!wasOpenRef.current) {
+      wasOpenRef.current = true;
+      const panel = panelRef.current;
+      const firstField =
+        panel?.querySelector<HTMLElement>("input, textarea, select") ??
+        panel?.querySelector<HTMLElement>("button:not([aria-label='Close'])");
+      firstField?.focus();
+    }
 
     return () => {
       document.removeEventListener("keydown", onKeyDown);
       document.body.style.overflow = previousOverflow;
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open || typeof document === "undefined") return null;
 

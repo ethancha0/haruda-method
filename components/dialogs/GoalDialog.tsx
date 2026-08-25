@@ -10,35 +10,48 @@ export function GoalDialog({ onClose }: { onClose: () => void }) {
   const router = useRouter();
   const { chart, updateGoal, resetChart } = useChartStore();
   const [confirmingReset, setConfirmingReset] = useState(false);
+  const [draftGoal, setDraftGoal] = useState(chart?.goal ?? "");
+  const [draftWhy, setDraftWhy] = useState(chart?.why ?? "");
+  const [draftDeadline, setDraftDeadline] = useState(chart?.deadline ?? "");
 
   if (!chart) return null;
+
+  const commitGoal = () => {
+    const goal = draftGoal.trim();
+    if (!goal) {
+      setDraftGoal(chart.goal);
+      return;
+    }
+    updateGoal({
+      goal,
+      why: draftWhy.trim() || undefined,
+      deadline: draftDeadline || undefined,
+    });
+  };
 
   return (
     <Dialog open onClose={onClose} eyebrow="The centre of the chart" title="Your goal">
       <div className="space-y-5">
         <TextField
           label="Long-term goal"
-          value={chart.goal}
+          value={draftGoal}
           maxLength={120}
-          onChange={(goal) =>
-            updateGoal({ goal, why: chart.why, deadline: chart.deadline })
-          }
+          onChange={setDraftGoal}
+          onBlur={commitGoal}
         />
         <TextAreaField
           label="Why it matters"
-          value={chart.why ?? ""}
-          onChange={(why) =>
-            updateGoal({ goal: chart.goal, why, deadline: chart.deadline })
-          }
+          value={draftWhy}
+          onChange={setDraftWhy}
+          onBlur={commitGoal}
           placeholder="The reason you will still care about this in month five."
         />
         <TextField
           label="Target date"
           type="date"
-          value={chart.deadline ?? ""}
-          onChange={(deadline) =>
-            updateGoal({ goal: chart.goal, why: chart.why, deadline })
-          }
+          value={draftDeadline}
+          onChange={setDraftDeadline}
+          onBlur={commitGoal}
         />
 
         <div className="border-t border-line pt-5">

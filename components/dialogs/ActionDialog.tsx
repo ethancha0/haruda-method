@@ -163,9 +163,14 @@ export function ActionDialog({
             <input
               value={draftTitle}
               maxLength={48}
-              onChange={(event) => {
-                setDraftTitle(event.target.value);
-                store.updateAction(action.id, { title: event.target.value });
+              onChange={(event) => setDraftTitle(event.target.value)}
+              onBlur={() => {
+                const title = draftTitle.trim();
+                if (title && title !== action.title) {
+                  store.updateAction(action.id, { title });
+                } else if (!title) {
+                  setDraftTitle(action.title);
+                }
               }}
               aria-label="Action title"
               className={inputClass}
@@ -173,7 +178,7 @@ export function ActionDialog({
             <div className="flex items-center justify-between">
               <span className="text-[13px] text-ink-soft">Weekly cadence</span>
               <TargetStepper
-                value={action.target}
+                value={draftTarget}
                 onChange={(target) => {
                   setDraftTarget(target);
                   store.updateAction(action.id, { target });

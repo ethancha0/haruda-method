@@ -9,6 +9,7 @@ type TextFieldProps = {
   label: string;
   value: string;
   onChange: (value: string) => void;
+  onBlur?: () => void;
   placeholder?: string;
   hint?: string;
   type?: "text" | "date";
@@ -20,6 +21,7 @@ export function TextField({
   label,
   value,
   onChange,
+  onBlur,
   placeholder,
   hint,
   type = "text",
@@ -40,6 +42,7 @@ export function TextField({
         maxLength={maxLength}
         placeholder={placeholder}
         onChange={(event) => onChange(event.target.value)}
+        onBlur={onBlur}
         className={`mt-2 ${inputClass}`}
       />
       {hint && <p className="mt-1.5 text-[13px] text-ink-faint">{hint}</p>}
@@ -51,6 +54,7 @@ type TextAreaFieldProps = {
   label: string;
   value: string;
   onChange: (value: string) => void;
+  onBlur?: () => void;
   placeholder?: string;
   rows?: number;
 };
@@ -59,6 +63,7 @@ export function TextAreaField({
   label,
   value,
   onChange,
+  onBlur,
   placeholder,
   rows = 3,
 }: TextAreaFieldProps) {
@@ -74,6 +79,7 @@ export function TextAreaField({
         rows={rows}
         placeholder={placeholder}
         onChange={(event) => onChange(event.target.value)}
+        onBlur={onBlur}
         className={`mt-2 resize-none ${inputClass}`}
       />
     </div>

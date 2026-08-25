@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useChartStore } from "@/components/ChartProvider";
 import { Dialog } from "@/components/ui/Dialog";
 import { inputClass } from "@/components/ui/Field";
@@ -19,11 +20,15 @@ export function ThemeDialog({
 }: ThemeDialogProps) {
   const store = useChartStore();
   const { chart, weekKey } = store;
-  if (!chart) return null;
+  const summary = chart
+    ? buildChartWeek(chart, weekKey).themes.find(
+        (item) => item.theme.id === themeId,
+      )
+    : undefined;
 
-  const week = buildChartWeek(chart, weekKey);
-  const summary = week.themes.find((item) => item.theme.id === themeId);
-  if (!summary) return null;
+  const [draftTitle, setDraftTitle] = useState(summary?.theme.title ?? "");
+
+  if (!chart || !summary) return null;
 
   return (
     <Dialog
@@ -34,11 +39,17 @@ export function ThemeDialog({
     >
       <div className="space-y-5">
         <input
-          value={summary.theme.title}
+          value={draftTitle}
           maxLength={40}
-          onChange={(event) =>
-            store.updateTheme(summary.theme.id, event.target.value)
-          }
+          onChange={(event) => setDraftTitle(event.target.value)}
+          onBlur={() => {
+            const title = draftTitle.trim();
+            if (title && title !== summary.theme.title) {
+              store.updateTheme(summary.theme.id, title);
+            } else if (!title) {
+              setDraftTitle(summary.theme.title);
+            }
+          }}
           aria-label="Theme name"
           className={inputClass}
         />
