@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
+import { AppFooter } from "@/components/AppFooter";
 import { AppNav } from "@/components/AppNav";
 import { ChartProvider } from "@/components/ChartProvider";
 import "./globals.css";
@@ -22,6 +23,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <ChartProvider>
           <AppNav />
           <main className="flex-1 w-full">{children}</main>
+          <AppFooter />
         </ChartProvider>
       </body>
     </html>
