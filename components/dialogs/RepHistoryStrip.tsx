@@ -15,7 +15,9 @@ const HISTORY_DAYS = 14;
 type RepHistoryStripProps = {
   actionId: string;
   logs: LogEntry[];
-  logDate: string;
+  /** The day new reps currently land on; click a square to move it. */
+  selectedLogDate: string;
+  onSelectLogDate: (day: string) => void;
   chartCreatedAt: string;
 };
 
@@ -27,17 +29,17 @@ function cellClass(count: number, selected: boolean): string {
         ? "border-accent-soft/60 bg-cell-met"
         : "border-accent-soft bg-cell-ahead";
   const ring = selected ? " ring-2 ring-accent ring-offset-1" : "";
-  return `h-6 flex-1 border ${base}${ring}`;
+  return `h-6 flex-1 border transition ${base}${ring}`;
 }
 
 export function RepHistoryStrip({
   actionId,
   logs,
-  logDate,
+  selectedLogDate,
+  onSelectLogDate,
   chartCreatedAt,
 }: RepHistoryStripProps) {
-  const [windowEndDay, setWindowEndDay] = useState(logDate);
-  const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const [windowEndDay, setWindowEndDay] = useState(selectedLogDate);
 
   const actionLogs = useMemo(
     () => logs.filter((log) => log.actionId === actionId),
@@ -56,7 +58,8 @@ export function RepHistoryStrip({
   const windowStartDay = addDaysToKey(windowEndDay, -(HISTORY_DAYS - 1));
   const today = todayKey();
 
-  const canGoNext = windowEndDay < today;
+  // Allow scrolling up to a week past today so future days can be logged too.
+  const canGoNext = daysBetween(windowEndDay, addDaysToKey(today, 7)) > 0;
   const canGoPrev =
     daysBetween(earliestDay, addDaysToKey(windowEndDay, -7 - (HISTORY_DAYS - 1))) >=
     0;
@@ -76,9 +79,8 @@ export function RepHistoryStrip({
     });
   }, [actionLogs, windowStartDay]);
 
-  const selectedLogs = selectedDay
-    ? (days.find((entry) => entry.day === selectedDay)?.logs ?? [])
-    : [];
+  const selectedLogs =
+    days.find((entry) => entry.day === selectedLogDate)?.logs ?? [];
 
   return (
     <div>
@@ -87,10 +89,9 @@ export function RepHistoryStrip({
         <div className="flex items-center gap-1">
           <button
             type="button"
-            onClick={() => {
-              setWindowEndDay((current) => addDaysToKey(current, -7));
-              setSelectedDay(null);
-            }}
+            onClick={() =>
+              setWindowEndDay((current) => addDaysToKey(current, -7))
+            }
             disabled={!canGoPrev}
             aria-label="Previous week"
             className="h-6 w-6 rounded-full border border-line text-[13px] text-ink-soft transition hover:border-line-strong hover:text-ink disabled:opacity-35"
@@ -102,10 +103,9 @@ export function RepHistoryStrip({
           </span>
           <button
             type="button"
-            onClick={() => {
-              setWindowEndDay((current) => addDaysToKey(current, 7));
-              setSelectedDay(null);
-            }}
+            onClick={() =>
+              setWindowEndDay((current) => addDaysToKey(current, 7))
+            }
             disabled={!canGoNext}
             aria-label="Next week"
             className="h-6 w-6 rounded-full border border-line text-[13px] text-ink-soft transition hover:border-line-strong hover:text-ink disabled:opacity-35"
@@ -117,35 +117,31 @@ export function RepHistoryStrip({
 
       <div className="mt-2 flex gap-1">
         {days.map((entry) => {
-          if (entry.count === 0) {
-            return (
-              <span
-                key={entry.day}
-                aria-hidden="true"
-                className={cellClass(0, false)}
-              />
-            );
-          }
-
-          const selected = selectedDay === entry.day;
+          const selected = selectedLogDate === entry.day;
+          const repLabel = `${entry.count} rep${entry.count === 1 ? "" : "s"}`;
           return (
             <button
               key={entry.day}
               type="button"
-              aria-label={`${formatFullDate(entry.day)}: ${entry.count} rep${entry.count === 1 ? "" : "s"}`}
+              aria-label={`${formatFullDate(entry.day)}: ${repLabel}. Log a rep on this day.`}
               aria-pressed={selected}
-              onClick={() =>
-                setSelectedDay(selected ? null : entry.day)
-              }
+              onClick={() => onSelectLogDate(entry.day)}
               className={cellClass(entry.count, selected)}
             />
           );
         })}
       </div>
 
-      {selectedDay && selectedLogs.length > 0 && (
+      <p className="mt-2 text-[12px] text-ink-faint">
+        Reps land on {formatFullDate(selectedLogDate)}
+        {selectedLogDate === today ? " (today)" : ""}. Tap a square to change it.
+      </p>
+
+      {selectedLogs.length > 0 && (
         <div className="mt-3 border border-line bg-surface-sunk px-3 py-2.5">
-          <p className="text-[12px] text-ink-soft">{formatFullDate(selectedDay)}</p>
+          <p className="text-[12px] text-ink-soft">
+            {formatFullDate(selectedLogDate)}
+          </p>
           <ul className="mt-2 space-y-2">
             {selectedLogs.map((log, index) => (
               <li key={log.id} className="text-[13px]">

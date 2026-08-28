@@ -10,7 +10,6 @@ import {
   addDaysToKey,
   daysBetween,
   formatDayGap,
-  formatFullDate,
   isWithinWeek,
   todayKey,
 } from "@/lib/dates";
@@ -39,8 +38,12 @@ export function ActionDialog({
   const [draftTitle, setDraftTitle] = useState(action?.title ?? "");
   const [draftTarget, setDraftTarget] = useState(action?.target ?? 3);
   const [draftNote, setDraftNote] = useState("");
+  // The day reps land on. Defaults to today (or the reviewed week's end), but
+  // the user can point it at any day by clicking a square in the history strip.
+  const [logDateOverride, setLogDateOverride] = useState<string | null>(null);
 
-  const logDate = isCurrentWeek ? todayKey() : addDaysToKey(weekKey, 6);
+  const defaultLogDate = isCurrentWeek ? todayKey() : addDaysToKey(weekKey, 6);
+  const logDate = logDateOverride ?? defaultLogDate;
 
   const { reps, daysSinceLast } = useMemo(() => {
     const logs = chart?.logs.filter((log) => log.actionId === actionId) ?? [];
@@ -144,18 +147,12 @@ export function ActionDialog({
             className={inputClass}
           />
 
-          {!isCurrentWeek && (
-            <p className="text-[12px] text-ink-faint">
-              Reps land on {formatFullDate(logDate)} while you are reviewing an
-              earlier week.
-            </p>
-          )}
-
           <RepHistoryStrip
-            key={`${action.id}-${logDate}`}
+            key={action.id}
             actionId={action.id}
             logs={chart.logs}
-            logDate={logDate}
+            selectedLogDate={logDate}
+            onSelectLogDate={setLogDateOverride}
             chartCreatedAt={chart.createdAt}
           />
 
