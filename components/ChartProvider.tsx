@@ -37,6 +37,7 @@ type ChartAction =
       target?: number;
     }
   | { type: "deleteAction"; actionId: string }
+  | { type: "moveAction"; actionId: string; toThemeId: string }
   | { type: "updateTheme"; themeId: string; title: string }
   | { type: "updateGoal"; goal: string; why?: string; deadline?: string }
   | { type: "setWeekNote"; weekKey: string; note: string }
@@ -161,6 +162,26 @@ function reducer(state: State, action: ChartAction): State {
         },
       };
 
+    case "moveAction": {
+      const moving = chart.actions.find((item) => item.id === action.actionId);
+      if (!moving || moving.themeId === action.toThemeId) return state;
+      const targetCount = chart.actions.filter(
+        (item) => item.themeId === action.toThemeId,
+      ).length;
+      if (targetCount >= ACTIONS_PER_THEME) return state;
+      return {
+        ...state,
+        chart: {
+          ...chart,
+          actions: chart.actions.map((item) =>
+            item.id === action.actionId
+              ? { ...item, themeId: action.toThemeId }
+              : item,
+          ),
+        },
+      };
+    }
+
     case "updateTheme":
       return {
         ...state,
@@ -219,6 +240,7 @@ export type ChartStore = {
     patch: { title?: string; target?: number },
   ) => void;
   deleteAction: (actionId: string) => void;
+  moveAction: (actionId: string, toThemeId: string) => void;
   updateTheme: (themeId: string, title: string) => void;
   updateGoal: (patch: {
     goal: string;
@@ -364,6 +386,8 @@ export function ChartProvider({ children }: { children: React.ReactNode }) {
       updateAction: (actionId, patch) =>
         dispatch({ type: "updateAction", actionId, ...patch }),
       deleteAction: (actionId) => dispatch({ type: "deleteAction", actionId }),
+      moveAction: (actionId, toThemeId) =>
+        dispatch({ type: "moveAction", actionId, toThemeId }),
       updateTheme: (themeId, title) =>
         dispatch({ type: "updateTheme", themeId, title }),
       updateGoal: (patch) => dispatch({ type: "updateGoal", ...patch }),

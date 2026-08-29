@@ -16,7 +16,7 @@ import { formatDayMonth } from "@/lib/dates";
 import type { Chart } from "@/lib/types";
 
 export function ChartBoard({ chart }: { chart: Chart }) {
-  const { weekKey, isCurrentWeek, logRep } = useChartStore();
+  const { weekKey, isCurrentWeek, logRep, moveAction } = useChartStore();
   const [target, setTarget] = useState<DialogTarget>(null);
 
   const week = useMemo(() => buildChartWeek(chart, weekKey), [chart, weekKey]);
@@ -29,6 +29,8 @@ export function ChartBoard({ chart }: { chart: Chart }) {
     onOpenEmptySlot: (themeId: string) =>
       setTarget({ kind: "newAction", themeId }),
     onOpenTheme: (themeId: string) => setTarget({ kind: "theme", themeId }),
+    onMoveAction: (actionId: string, toThemeId: string) =>
+      moveAction(actionId, toThemeId),
   };
 
   const order = [0, 1, 2, 3, -1, 4, 5, 6, 7];

@@ -8,9 +8,21 @@ type ActionCellProps = {
   summary: ActionSummary;
   onOpen: () => void;
   onQuickLog?: () => void;
+  draggable?: boolean;
+  isDragging?: boolean;
+  onDragStart?: (event: React.DragEvent<HTMLDivElement>) => void;
+  onDragEnd?: () => void;
 };
 
-export function ActionCell({ summary, onOpen, onQuickLog }: ActionCellProps) {
+export function ActionCell({
+  summary,
+  onOpen,
+  onQuickLog,
+  draggable,
+  isDragging,
+  onDragStart,
+  onDragEnd,
+}: ActionCellProps) {
   const { action, reps, status, daysSinceLast, isCold } = summary;
   const gapLabel =
     isCold && daysSinceLast !== null
@@ -18,7 +30,14 @@ export function ActionCell({ summary, onOpen, onQuickLog }: ActionCellProps) {
       : formatDayGap(daysSinceLast);
 
   return (
-    <div className="group relative">
+    <div
+      className={`group relative ${draggable ? "cursor-grab active:cursor-grabbing" : ""} ${
+        isDragging ? "opacity-40" : ""
+      }`}
+      draggable={draggable}
+      onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
+    >
       <button
         type="button"
         data-cell
